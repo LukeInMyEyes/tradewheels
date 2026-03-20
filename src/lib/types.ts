@@ -53,9 +53,11 @@ export interface LeadPayload {
   Comments?: string;
   VehicleBrand?: string;
   Vehicle?: string;
+  ModelYear?: string;
   StockNo?: string;
   NewUsed: string;
   LeadOrigin: string;
+  Title?: string;
 }
 
 export interface EnquiryFormData {

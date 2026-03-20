@@ -33,7 +33,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
+      <body className={`${inter.variable} ${montserrat.variable} font-sans antialiased`}>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-53NLFJVE07"
           strategy="afterInteractive"
@@ -46,8 +46,6 @@ export default function RootLayout({
             gtag('config', 'G-53NLFJVE07');
           `}
         </Script>
-      </head>
-      <body className={`${inter.variable} ${montserrat.variable} font-sans antialiased`}>
         <Header />
         <main className="min-h-screen">{children}</main>
         <Footer />

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { FinanceApplication } from '@/lib/finance-types';
+import { submitLead } from '@/lib/leads';
+import { LeadPayload } from '@/lib/types';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FINANCE_EMAIL = process.env.FINANCE_EMAIL || 'info@tradewheels.co.za';
@@ -95,16 +97,54 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Consent is required' }, { status: 400 });
     }
 
-    const { error } = await resend.emails.send({
-      from: 'Trade Wheels Finance <onboarding@resend.dev>',
-      to: [FINANCE_EMAIL],
-      subject: `Finance Application: ${body.title} ${body.firstName} ${body.lastName}${body.vehicleInterest ? ` — ${body.vehicleInterest}` : ''}`,
-      html: buildEmailHtml(body),
-    });
+    // Send email notification and submit lead to CRM in parallel
+    const lead: LeadPayload = {
+      DealerID: parseInt(process.env.LEADS_DEALER_ID || '355', 10),
+      ExternalLeadID: `TW-FIN-${Date.now()}`,
+      Title: body.title || undefined,
+      FirstName: body.firstName,
+      LastName: body.lastName,
+      ContactNumber: body.cellphone,
+      EmailAddress: body.email,
+      Comments: [
+        'Finance Application',
+        body.vehicleInterest ? `Vehicle: ${body.vehicleInterest}` : null,
+        body.depositAmount ? `Deposit: R${body.depositAmount}` : null,
+        `Gross Income: R${body.grossIncome}`,
+        `Net Income: R${body.netIncome}`,
+        `Employer: ${body.employerName}`,
+      ].filter(Boolean).join('. '),
+      VehicleBrand: body.vehicleInterest?.split(' ')[0] || undefined,
+      Vehicle: body.vehicleInterest || undefined,
+      NewUsed: 'Used',
+      LeadOrigin: 'TradeWheels.co.za - Finance',
+    };
 
-    if (error) {
-      console.error('Resend error:', error);
-      throw new Error('Email delivery failed');
+    const [emailResult, leadResult] = await Promise.allSettled([
+      resend.emails.send({
+        from: 'Trade Wheels Finance <onboarding@resend.dev>',
+        to: [FINANCE_EMAIL],
+        subject: `Finance Application: ${body.title} ${body.firstName} ${body.lastName}${body.vehicleInterest ? ` — ${body.vehicleInterest}` : ''}`,
+        html: buildEmailHtml(body),
+      }),
+      submitLead(lead),
+    ]);
+
+    // Log any failures
+    if (leadResult.status === 'rejected') {
+      console.error('ESLeads submission failed (finance):', leadResult.reason);
+    }
+    if (emailResult.status === 'rejected') {
+      console.error('Email send failed (finance):', emailResult.reason);
+    } else if (emailResult.value.error) {
+      console.error('Resend error (finance):', emailResult.value.error);
+    }
+
+    // Succeed if at least one channel worked
+    const emailOk = emailResult.status === 'fulfilled' && !emailResult.value.error;
+    const leadOk = leadResult.status === 'fulfilled';
+    if (!emailOk && !leadOk) {
+      throw new Error('Both email and lead submission failed');
     }
 
     return NextResponse.json({ success: true });

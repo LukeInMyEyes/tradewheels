@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { submitLead } from '@/lib/leads';
+import { LeadPayload } from '@/lib/types';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FINANCE_EMAIL = process.env.FINANCE_EMAIL || 'info@tradewheels.co.za';
@@ -69,16 +71,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Required fields are missing' }, { status: 400 });
     }
 
-    const { error } = await resend.emails.send({
-      from: 'Trade Wheels <onboarding@resend.dev>',
-      to: [FINANCE_EMAIL],
-      subject: `Sell My Car: ${body.vehicleYear} ${body.vehicleMake} ${body.vehicleModel} — ${body.firstName} ${body.lastName}`,
-      html: buildEmailHtml(body),
-    });
+    // Send email notification and submit lead to CRM in parallel
+    const lead: LeadPayload = {
+      DealerID: parseInt(process.env.LEADS_DEALER_ID || '355', 10),
+      ExternalLeadID: `TW-SELL-${Date.now()}`,
+      FirstName: body.firstName,
+      LastName: body.lastName,
+      ContactNumber: body.phone,
+      EmailAddress: body.email || undefined,
+      Comments: [
+        `Wants to SELL: ${body.vehicleYear} ${body.vehicleMake} ${body.vehicleModel}`,
+        `Mileage: ${body.mileage}km`,
+        `Condition: ${body.condition}`,
+        `Service History: ${body.serviceHistory}`,
+        `Warranty: ${body.hasWarranty}`,
+        body.askingPrice ? `Asking: ${body.askingPrice}` : null,
+        body.vinNumber ? `VIN: ${body.vinNumber}` : null,
+        body.message ? `Notes: ${body.message}` : null,
+      ].filter(Boolean).join('. '),
+      VehicleBrand: body.vehicleMake,
+      Vehicle: `${body.vehicleMake} ${body.vehicleModel}`,
+      ModelYear: body.vehicleYear,
+      NewUsed: 'Used',
+      LeadOrigin: 'TradeWheels.co.za - Sell My Car',
+    };
 
-    if (error) {
-      console.error('Resend error:', error);
-      throw new Error('Email delivery failed');
+    const [emailResult, leadResult] = await Promise.allSettled([
+      resend.emails.send({
+        from: 'Trade Wheels <onboarding@resend.dev>',
+        to: [FINANCE_EMAIL],
+        subject: `Sell My Car: ${body.vehicleYear} ${body.vehicleMake} ${body.vehicleModel} — ${body.firstName} ${body.lastName}`,
+        html: buildEmailHtml(body),
+      }),
+      submitLead(lead),
+    ]);
+
+    // Log any failures
+    if (leadResult.status === 'rejected') {
+      console.error('ESLeads submission failed (sell):', leadResult.reason);
+    }
+    if (emailResult.status === 'rejected') {
+      console.error('Email send failed (sell):', emailResult.reason);
+    } else if (emailResult.value.error) {
+      console.error('Resend error (sell):', emailResult.value.error);
+    }
+
+    // Succeed if at least one channel worked
+    const emailOk = emailResult.status === 'fulfilled' && !emailResult.value.error;
+    const leadOk = leadResult.status === 'fulfilled';
+    if (!emailOk && !leadOk) {
+      throw new Error('Both email and lead submission failed');
     }
 
     return NextResponse.json({ success: true });

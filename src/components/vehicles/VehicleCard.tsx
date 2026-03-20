@@ -21,6 +21,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
             src={mainImage.fullImageUrl}
             alt={vehicle.fullTitle}
             fill
+            unoptimized
             className="object-cover transition-transform duration-700"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />

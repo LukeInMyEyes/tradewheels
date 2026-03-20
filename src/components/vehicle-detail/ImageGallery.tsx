@@ -28,6 +28,7 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
           src={images[activeIndex].fullImageUrl}
           alt={`${alt} - Image ${activeIndex + 1}`}
           fill
+          unoptimized
           className="object-cover"
           sizes="(max-width: 1024px) 100vw, 60vw"
           priority
@@ -74,6 +75,7 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
                 src={img.thumbnailUrl || img.fullImageUrl}
                 alt={`Thumbnail ${i + 1}`}
                 fill
+                unoptimized
                 className="object-cover"
                 sizes="80px"
               />
