@@ -35,8 +35,8 @@ function EasterEgg({ left, delay, duration, size, color, stripe }: {
                         <ellipse cx="20" cy="25" rx="18" ry="5" fill={stripe} opacity="0.7" />
                         <ellipse cx="20" cy="35" rx="18" ry="5" fill={stripe} opacity="0.7" />
                         <ellipse cx="20" cy="25" rx="18" ry="23" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                </svg>svg>
-          </div>div>
+                </svg>
+          </div>
         );
 }
 
@@ -69,8 +69,8 @@ function EasterBunny() {
                         <ellipse cx="36" cy="31" rx="4" ry="2.5" fill="#f9c8d0" opacity="0.6" />
                         <ellipse cx="26" cy="50" rx="5" ry="6.5" fill="#a8d8a8" />
                         <ellipse cx="26" cy="50" rx="5" ry="1.8" fill="#c8f0c8" opacity="0.8" />
-                </svg>svg>
-          </div>div>
+                </svg>
+          </div>
         );
 }
 
@@ -92,7 +92,7 @@ export default function EasterOverlay() {
                                                                                           0%, 100% { transform: translateY(0px); }
                                                                                                     50%       { transform: translateY(-6px); }
                                                                                                             }
-                                                                                                                  `}</style>style>
+                                                                                                                  `}</style>
             {EGGS.map(egg => <EasterEgg key={egg.id} {...egg} />)}
                 <EasterBunny />
           </>>
