@@ -95,7 +95,6 @@ export default function EasterOverlay() {
                                                                                                                   `}</style>
             {EGGS.map(egg => <EasterEgg key={egg.id} {...egg} />)}
                 <EasterBunny />
-          </>>
+          </>
         );
 }
-}</></div>
